@@ -33,6 +33,9 @@ import { vfsFonts } from 'pdfmake/build/vfs_fonts';
 
 const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod';
 
+// axios 기본 설정
+axios.defaults.withCredentials = true;
+
 const AppContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
@@ -350,8 +353,9 @@ function App() {
 
         const response = await axios.post(`${API_URL}/ocr`, formData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
-          }
+            'Content-Type': 'multipart/form-data'
+          },
+          withCredentials: true
         });
 
         if (response.data.error) {
