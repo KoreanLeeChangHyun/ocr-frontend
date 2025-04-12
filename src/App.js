@@ -31,6 +31,8 @@ import { vfsFonts } from 'pdfmake/build/vfs_fonts';
 //   },
 // });
 
+const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod';
+
 const AppContainer = styled.div`
   max-width: 1200px;
   margin: 0 auto;
@@ -47,66 +49,67 @@ const Title = styled.h1`
 `;
 
 const UploadSection = styled.div`
-  border: 2px dashed #ccc;
-  padding: 3rem;
+  border: 2px dashed ${props => props.isDragging ? '#2ecc71' : '#bdc3c7'};
+  border-radius: 8px;
+  padding: 2rem;
   text-align: center;
-  margin-bottom: 2rem;
-  border-radius: 12px;
-  background-color: ${props => props.isDragging ? '#e8f5e9' : 'white'};
+  background: ${props => props.isDragging ? '#f0f9f4' : '#f8f9fa'};
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 2rem;
+`;
+
+const FileInput = styled.input`
+  display: none;
 `;
 
 const UploadButton = styled.button`
-  background-color: #4CAF50;
+  background-color: #2ecc71;
   color: white;
-  padding: 12px 24px;
+  padding: 1rem 2rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 1.1rem;
   margin-top: 1rem;
-  font-size: 1rem;
   transition: background-color 0.3s ease;
-  
+
   &:hover {
-    background-color: #45a049;
+    background-color: #27ae60;
   }
-  
+
   &:disabled {
-    background-color: #cccccc;
+    background-color: #95a5a6;
     cursor: not-allowed;
   }
 `;
 
-const FileList = styled.div`
-  margin-top: 1.5rem;
-  text-align: left;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+const FileList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
 `;
 
-const FileItem = styled.div`
-  padding: 0.8rem;
-  border-bottom: 1px solid #eee;
+const FileItem = styled.li`
+  background: white;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+`;
+
+const RemoveButton = styled.button`
+  background: #e74c3c;
+  color: white;
+  border: none;
   border-radius: 4px;
-  margin-bottom: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  cursor: pointer;
   
-  button {
-    background: #ff4444;
-    color: white;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-    
-    &:hover {
-      background: #cc0000;
-    }
+  &:hover {
+    background: #c0392b;
   }
 `;
 
@@ -304,61 +307,66 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles(prevFiles => [...prevFiles, ...droppedFiles]);
+  }, []);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+  }, []);
+
   const handleDragEnter = useCallback((e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(true);
   }, []);
 
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
   }, []);
 
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles(prevFiles => [...prevFiles, ...droppedFiles]);
-  }, []);
-
-  const handleFileSelect = (e) => {
+  const handleFileInput = useCallback((e) => {
     const selectedFiles = Array.from(e.target.files);
     setFiles(prevFiles => [...prevFiles, ...selectedFiles]);
-  };
+  }, []);
 
-  const removeFile = (index) => {
+  const removeFile = useCallback((index) => {
     setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-  };
+  }, []);
 
   const handleOCR = async () => {
     if (files.length === 0) return;
 
     setLoading(true);
     try {
-      const formData = new FormData();
-      files.forEach((file, index) => {
-        formData.append(`images`, file);
-      });
+      const results = [];
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      // 임시 테스트 데이터
-      const mockResults = files.map((file, index) => ({
-        image: URL.createObjectURL(file),
-        text: `이것은 ${index + 1}번째 페이지의 OCR 결과입니다.\n\n이미지에서 추출된 텍스트가 여기에 표시됩니다.`,
-        summary: `이것은 ${index + 1}번째 페이지의 요약입니다. 실제 API 연동 시에는 백엔드에서 생성된 요약이 표시됩니다.`
-      }));
+        const response = await axios.post(`${API_URL}/ocr`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          }
+        });
 
-      setResults(mockResults);
+        if (response.data.error) {
+          throw new Error(response.data.error);
+        }
+
+        results.push({
+          text: response.data.text,
+          summary: response.data.summary,
+          image: response.data.image
+        });
+      }
+      setResults(results);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('OCR 처리 중 오류 발생:', error);
       alert('OCR 처리 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
@@ -410,31 +418,28 @@ function App() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <p style={{ fontSize: '1.2rem', color: '#666' }}>
-          파일을 드래그앤드롭하거나 선택하세요
-        </p>
-        <input
+        <p>이미지 파일을 드래그하여 놓거나, 아래 버튼을 클릭하세요.</p>
+        <FileInput
           type="file"
-          accept="image/*"
-          onChange={handleFileSelect}
-          multiple
-          style={{ display: 'none' }}
           id="fileInput"
+          multiple
+          accept="image/*"
+          onChange={handleFileInput}
         />
-        <label htmlFor="fileInput">
-          <UploadButton as="span">파일 선택</UploadButton>
-        </label>
+        <UploadButton as="label" htmlFor="fileInput">
+          파일 선택
+        </UploadButton>
         
-        {files.length > 0 && (
-          <FileList>
-            {files.map((file, index) => (
-              <FileItem key={index}>
-                <span>{file.name}</span>
-                <button onClick={() => removeFile(index)}>삭제</button>
-              </FileItem>
-            ))}
-          </FileList>
-        )}
+        <FileList>
+          {files.map((file, index) => (
+            <FileItem key={index}>
+              {file.name}
+              <RemoveButton onClick={() => removeFile(index)}>
+                삭제
+              </RemoveButton>
+            </FileItem>
+          ))}
+        </FileList>
         
         <UploadButton onClick={handleOCR} disabled={files.length === 0 || loading}>
           {loading ? '처리 중...' : 'OCR 변환 시작'}
@@ -448,7 +453,7 @@ function App() {
               <Page key={index}>
                 <PageContent>
                   <PageImage>
-                    <img src={result.image} alt={`Page ${currentPage + 1}`} />
+                    <img src={`data:image/jpeg;base64,${result.image}`} alt={`Page ${currentPage + 1}`} />
                   </PageImage>
                   <PageText>
                     <PageTitle>페이지 {currentPage + 1}</PageTitle>
