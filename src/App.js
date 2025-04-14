@@ -34,7 +34,14 @@ import { vfsFonts } from 'pdfmake/build/vfs_fonts';
 const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod/api';
 
 // axios 기본 설정
-axios.defaults.withCredentials = true;
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'multipart/form-data',
+    'Accept': 'application/json'
+  }
+});
 
 const AppContainer = styled.div`
   max-width: 1200px;
@@ -351,12 +358,7 @@ function App() {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await axios.post(`${API_URL}/ocr`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          withCredentials: true
-        });
+        const response = await api.post('/ocr', formData);
 
         if (response.data.error) {
           throw new Error(response.data.error);
@@ -371,7 +373,12 @@ function App() {
       setResults(results);
     } catch (error) {
       console.error('OCR 처리 중 오류 발생:', error);
-      alert('OCR 처리 중 오류가 발생했습니다.');
+      if (error.response) {
+        console.error('응답 데이터:', error.response.data);
+        console.error('응답 상태:', error.response.status);
+        console.error('응답 헤더:', error.response.headers);
+      }
+      alert('OCR 처리 중 오류가 발생했습니다: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -391,8 +398,8 @@ function App() {
 
   const handleDownload = async () => {
     try {
-      const response = await axios.post(
-        `${API_URL}/generate-pdf`,
+      const response = await api.post(
+        '/generate-pdf',
         { results },
         { responseType: 'blob' }
       );
@@ -407,7 +414,12 @@ function App() {
       link.remove();
     } catch (error) {
       console.error('PDF 다운로드 중 오류 발생:', error);
-      alert('PDF 다운로드 중 오류가 발생했습니다.');
+      if (error.response) {
+        console.error('응답 데이터:', error.response.data);
+        console.error('응답 상태:', error.response.status);
+        console.error('응답 헤더:', error.response.headers);
+      }
+      alert('PDF 다운로드 중 오류가 발생했습니다: ' + error.message);
     }
   };
 
