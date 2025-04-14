@@ -4,37 +4,9 @@
 import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { createPdf } from 'pdfmake/build/pdfmake';
-import { vfsFonts } from 'pdfmake/build/vfs_fonts';
-// import { Amplify, API, Storage } from 'aws-amplify';
-// import { withAuthenticator } from '@aws-amplify/ui-react';
-// import '@aws-amplify/ui-react/styles.css';
 
-// AWS Amplify 설정
-// Amplify.configure({
-//   Auth: {
-//     region: 'ap-northeast-2',
-//     userPoolId: process.env.REACT_APP_USER_POOL_ID,
-//     userPoolWebClientId: process.env.REACT_APP_USER_POOL_CLIENT_ID,
-//   },
-//   Storage: {
-//     AWSS3: {
-//       bucket: process.env.REACT_APP_S3_BUCKET,
-//       region: 'ap-northeast-2',
-//     },
-//   },
-//   API: {
-//     endpoints: [
-//       {
-//         name: 'ocrApi',
-//         endpoint: process.env.REACT_APP_API_URL,
-//         region: 'ap-northeast-2',
-//       },
-//     ],
-//   },
-// });
-
-const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod/api';
+// API 엔드포인트 설정
+const API_URL = 'https://dk4ey8kt45.execute-api.ap-northeast-2.amazonaws.com/prod/api';
 
 // axios 기본 설정
 const api = axios.create({
