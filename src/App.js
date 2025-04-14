@@ -41,6 +41,9 @@ const UploadSection = styled.div`
   background: ${props => props.isDragging ? '#f0f9f4' : '#f8f9fa'};
   transition: all 0.3s ease;
   margin-bottom: 2rem;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const FileInput = styled.input`
@@ -72,6 +75,9 @@ const FileList = styled.ul`
   list-style: none;
   padding: 0;
   margin: 1rem 0;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const FileItem = styled.li`
@@ -103,6 +109,9 @@ const ResultsContainer = styled.div`
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 2rem;
   margin-top: 2rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
 const PageResult = styled.div`
@@ -135,6 +144,8 @@ const PageHeader = styled.div`
 const ImagePreview = styled.img`
   width: 100%;
   height: auto;
+  max-height: 400px;
+  object-fit: contain;
   border-radius: 8px;
   margin-bottom: 1rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -285,6 +296,13 @@ const DownloadButton = styled.button`
   }
 `;
 
+const ButtonContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1rem 0;
+`;
+
 function App() {
   // 상태 관리
   const [files, setFiles] = useState([]);
@@ -342,7 +360,7 @@ function App() {
     });
 
     try {
-      const response = await api.post('/ocr', formData);
+      const response = await api.post('/api/ocr', formData);
       setResults(response.data.results);
       setCurrentPage(0);
     } catch (error) {
@@ -355,7 +373,7 @@ function App() {
   // PDF 다운로드 핸들러
   const handleDownload = async () => {
     try {
-      const response = await api.post('/generate-pdf', { results }, {
+      const response = await api.post('/api/generate-pdf', { results }, {
         responseType: 'blob'
       });
       
@@ -390,12 +408,14 @@ function App() {
           accept="image/*"
           onChange={handleFileSelect}
         />
-        <UploadButton
-          onClick={() => document.getElementById('file-upload').click()}
-          disabled={isLoading}
-        >
-          파일 선택
-        </UploadButton>
+        <ButtonContainer>
+          <UploadButton
+            onClick={() => document.getElementById('file-upload').click()}
+            disabled={isLoading}
+          >
+            파일 선택
+          </UploadButton>
+        </ButtonContainer>
       </UploadSection>
 
       {files.length > 0 && (
@@ -411,12 +431,14 @@ function App() {
             ))}
           </FileList>
           
-          <UploadButton
-            onClick={handleOCR}
-            disabled={isLoading}
-          >
-            {isLoading ? '처리 중...' : 'OCR 처리'}
-          </UploadButton>
+          <ButtonContainer>
+            <UploadButton
+              onClick={handleOCR}
+              disabled={isLoading}
+            >
+              {isLoading ? '처리 중...' : 'OCR 처리'}
+            </UploadButton>
+          </ButtonContainer>
         </>
       )}
 
@@ -429,7 +451,7 @@ function App() {
                   <h3>{result.filename}</h3>
                 </PageHeader>
                 <ImagePreview
-                  src={`data:image/jpeg;base64,${result.image}`}
+                  src={result.image}
                   alt={result.filename}
                 />
                 <PageSummary>
@@ -442,9 +464,11 @@ function App() {
             ))}
           </ResultsContainer>
           
-          <UploadButton onClick={handleDownload}>
-            PDF 다운로드
-          </UploadButton>
+          <ButtonContainer>
+            <UploadButton onClick={handleDownload}>
+              PDF 다운로드
+            </UploadButton>
+          </ButtonContainer>
         </>
       )}
     </AppContainer>
