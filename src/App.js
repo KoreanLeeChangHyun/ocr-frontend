@@ -6,7 +6,7 @@ import styled from 'styled-components';
 import axios from 'axios';
 
 // API 엔드포인트 설정
-const API_URL = 'https://dk4ey8kt45.execute-api.ap-northeast-2.amazonaws.com/prod/api';
+const API_URL = 'https://dk4ey8kt45.execute-api.ap-northeast-2.amazonaws.com/prod';
 
 // axios 기본 설정
 const api = axios.create({
