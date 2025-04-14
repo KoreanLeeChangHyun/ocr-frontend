@@ -1,3 +1,6 @@
+// OCR 프론트엔드 애플리케이션의 메인 컴포넌트
+// React와 styled-components를 사용하여 구현된 웹 인터페이스
+
 import React, { useState, useCallback } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
@@ -311,100 +314,79 @@ const DownloadButton = styled.button`
 `;
 
 function App() {
+  // 상태 관리
   const [files, setFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [results, setResults] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles(prevFiles => [...prevFiles, ...droppedFiles]);
-  }, []);
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-  }, []);
-
+  // 파일 드래그 앤 드롭 핸들러
   const handleDragEnter = useCallback((e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(true);
   }, []);
 
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
   }, []);
 
-  const handleFileInput = useCallback((e) => {
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles(prev => [...prev, ...droppedFiles]);
+  }, []);
+
+  // 파일 선택 핸들러
+  const handleFileSelect = useCallback((e) => {
     const selectedFiles = Array.from(e.target.files);
-    setFiles(prevFiles => [...prevFiles, ...selectedFiles]);
+    setFiles(prev => [...prev, ...selectedFiles]);
   }, []);
 
-  const removeFile = useCallback((index) => {
-    setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+  // 파일 제거 핸들러
+  const handleRemoveFile = useCallback((index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   }, []);
 
+  // OCR 처리 핸들러
   const handleOCR = async () => {
     if (files.length === 0) return;
+    
+    setIsLoading(true);
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
 
-    setLoading(true);
     try {
-      const results = [];
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const response = await api.post('/ocr', formData);
-
-        if (response.data.error) {
-          throw new Error(response.data.error);
-        }
-
-        results.push({
-          text: response.data.text,
-          summary: response.data.summary,
-          image: response.data.image
-        });
-      }
-      setResults(results);
+      const response = await api.post('/ocr', formData);
+      setResults(response.data.results);
+      setCurrentPage(0);
     } catch (error) {
       console.error('OCR 처리 중 오류 발생:', error);
-      if (error.response) {
-        console.error('응답 데이터:', error.response.data);
-        console.error('응답 상태:', error.response.status);
-        console.error('응답 헤더:', error.response.headers);
-      }
-      alert('OCR 처리 중 오류가 발생했습니다: ' + error.message);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleNextPage = () => {
-    if (currentPage < results.length - 1) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
-
+  // PDF 다운로드 핸들러
   const handleDownload = async () => {
     try {
-      const response = await api.post(
-        '/generate-pdf',
-        { results },
-        { responseType: 'blob' }
-      );
+      const response = await api.post('/generate-pdf', { results }, {
+        responseType: 'blob'
+      });
       
-      // PDF 파일 다운로드
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -414,18 +396,12 @@ function App() {
       link.remove();
     } catch (error) {
       console.error('PDF 다운로드 중 오류 발생:', error);
-      if (error.response) {
-        console.error('응답 데이터:', error.response.data);
-        console.error('응답 상태:', error.response.status);
-        console.error('응답 헤더:', error.response.headers);
-      }
-      alert('PDF 다운로드 중 오류가 발생했습니다: ' + error.message);
     }
   };
 
   return (
     <AppContainer>
-      <Title>한글 책 OCR 변환기</Title>
+      <Title>OCR 이미지 처리 시스템</Title>
       
       <UploadSection
         isDragging={isDragging}
@@ -434,74 +410,70 @@ function App() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <p>이미지 파일을 드래그하여 놓거나, 아래 버튼을 클릭하세요.</p>
+        <p>이미지 파일을 드래그 앤 드롭하거나 선택하세요</p>
         <FileInput
           type="file"
-          id="fileInput"
+          id="file-upload"
           multiple
           accept="image/*"
-          onChange={handleFileInput}
+          onChange={handleFileSelect}
         />
-        <UploadButton as="label" htmlFor="fileInput">
+        <UploadButton
+          onClick={() => document.getElementById('file-upload').click()}
+          disabled={isLoading}
+        >
           파일 선택
-        </UploadButton>
-        
-        <FileList>
-          {files.map((file, index) => (
-            <FileItem key={index}>
-              {file.name}
-              <RemoveButton onClick={() => removeFile(index)}>
-                삭제
-              </RemoveButton>
-            </FileItem>
-          ))}
-        </FileList>
-        
-        <UploadButton onClick={handleOCR} disabled={files.length === 0 || loading}>
-          {loading ? '처리 중...' : 'OCR 변환 시작'}
         </UploadButton>
       </UploadSection>
 
-      {results.length > 0 && (
-        <BookContainer>
-          <Book>
-            {results.slice(currentPage, currentPage + 1).map((result, index) => (
-              <Page key={index}>
-                <PageContent>
-                  <PageImage>
-                    <img src={`data:image/jpeg;base64,${result.image}`} alt={`Page ${currentPage + 1}`} />
-                  </PageImage>
-                  <PageText>
-                    <PageTitle>페이지 {currentPage + 1}</PageTitle>
-                    <PageSummary>
-                      <strong>요약:</strong> {result.summary}
-                    </PageSummary>
-                    <PageContentText>
-                      {result.text}
-                    </PageContentText>
-                  </PageText>
-                </PageContent>
-              </Page>
+      {files.length > 0 && (
+        <>
+          <FileList>
+            {files.map((file, index) => (
+              <FileItem key={index}>
+                {file.name}
+                <RemoveButton onClick={() => handleRemoveFile(index)}>
+                  제거
+                </RemoveButton>
+              </FileItem>
             ))}
-          </Book>
+          </FileList>
           
-          <PageCounter>
-            {currentPage + 1} / {results.length}
-          </PageCounter>
-          
-          <NavigationButtons>
-            <button onClick={handlePrevPage} disabled={currentPage === 0}>
-              이전 페이지
-            </button>
-            <button onClick={handleNextPage} disabled={currentPage >= results.length - 1}>
-              다음 페이지
-            </button>
-          </NavigationButtons>
+          <UploadButton
+            onClick={handleOCR}
+            disabled={isLoading}
+          >
+            {isLoading ? '처리 중...' : 'OCR 처리'}
+          </UploadButton>
+        </>
+      )}
 
-          <DownloadButton onClick={handleDownload}>
-            PDF로 다운로드
-          </DownloadButton>
-        </BookContainer>
+      {results.length > 0 && (
+        <>
+          <ResultsContainer>
+            {results.map((result, index) => (
+              <PageResult key={index}>
+                <PageHeader>
+                  <h3>{result.filename}</h3>
+                </PageHeader>
+                <ImagePreview
+                  src={`data:image/jpeg;base64,${result.image}`}
+                  alt={result.filename}
+                />
+                <PageSummary>
+                  <strong>요약:</strong> {result.summary}
+                </PageSummary>
+                <PageContentText>
+                  {result.text}
+                </PageContentText>
+              </PageResult>
+            ))}
+          </ResultsContainer>
+          
+          <UploadButton onClick={handleDownload}>
+            PDF 다운로드
+          </UploadButton>
+        </>
       )}
     </AppContainer>
   );
