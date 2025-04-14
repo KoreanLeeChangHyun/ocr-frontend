@@ -31,7 +31,7 @@ import { vfsFonts } from 'pdfmake/build/vfs_fonts';
 //   },
 // });
 
-const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod';
+const API_URL = 'https://6gv7n95wcc.execute-api.ap-northeast-2.amazonaws.com/prod/api';
 
 // axios 기본 설정
 axios.defaults.withCredentials = true;
@@ -392,7 +392,7 @@ function App() {
   const handleDownload = async () => {
     try {
       const response = await axios.post(
-        'http://localhost:8000/generate-pdf',
+        `${API_URL}/generate-pdf`,
         { results },
         { responseType: 'blob' }
       );
